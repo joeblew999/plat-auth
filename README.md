@@ -4,11 +4,15 @@ Authelia and casbin
 
 ## concept
 
-authekia rubs using sqlite / coreosion. 
+an exact copy of google sign up and security thstbis reusable.
 
-cas bin runs in each app .
+authekia using sqlite / coreosion. 
 
-caddy fronts each app .
+cas bin runs in each app convertibg the user / roles to internal roles. simple CSV or whatever .
+
+caddy proxy in mode ?
+
+authekia web gui.
 
 see: 
 
