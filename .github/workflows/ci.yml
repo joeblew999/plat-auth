@@ -21,9 +21,6 @@ jobs:
           - runner: macos-latest
             os: darwin
             arch: arm64
-          - runner: windows-latest
-            os: windows
-            arch: amd64
 
     runs-on: ${{ matrix.runner }}
 
