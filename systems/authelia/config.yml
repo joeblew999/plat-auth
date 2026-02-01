@@ -1,7 +1,6 @@
 # Authelia Configuration
 # https://www.authelia.com/configuration/
-
-# TODO: Fill in your settings
+# Secrets are loaded from environment variables via .env (dotenv in Taskfile)
 
 theme: dark
 
@@ -14,19 +13,25 @@ log:
 totp:
   issuer: authelia.com
 
+identity_validation:
+  reset_password:
+    jwt_secret: insecure_jwt_secret
+
 authentication_backend:
   file:
     path: /tmp/authelia/users_database.yml
 
 access_control:
-  default_policy: deny
+  default_policy: one_factor
 
 session:
+  secret: insecure_session_secret
   cookies:
-    - domain: example.com
-      authelia_url: https://auth.example.com
+    - domain: 127.0.0.1
+      authelia_url: https://127.0.0.1:9091
 
 storage:
+  encryption_key: insecure_encryption_key
   local:
     path: /tmp/authelia/db.sqlite3
 

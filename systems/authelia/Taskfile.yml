@@ -49,7 +49,7 @@ tasks:
     deps:
       - src:clone
     cmds:
-      - go mod download
+      - go mod download all
       - cd web && pnpm install
 
   src:build:
