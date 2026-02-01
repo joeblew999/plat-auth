@@ -41,7 +41,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install xplat
-        uses: joeblew999/xplat/.github/actions/setup@main
+        run: go install github.com/joeblew999/xplat@main
 
       - name: Debug vars
         run: xplat task authelia:debug
