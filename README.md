@@ -1,6 +1,6 @@
 # plat-auth
 
-Authelia and casbin
+Authelia and casbin and lldap and corrossion.
 
 ## concept
 
