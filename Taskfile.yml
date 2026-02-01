@@ -8,6 +8,5 @@ vars:
 includes:
   authelia:
     taskfile: ./systems/authelia/Taskfile.yml
-    dir: ./systems/authelia
 
 tasks: {}

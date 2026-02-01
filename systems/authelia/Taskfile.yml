@@ -52,23 +52,37 @@ tasks:
     desc: Install Authelia build dependencies
     deps:
       - src:clone
+    dir: ".src/authelia"
     env:
       GOWORK: "off"
     cmds:
-      - cd {{.AUTHELIA_SRC}} && go mod download all
-      - cd {{.AUTHELIA_SRC}}/web && bun install
+      - go mod download all
+      - task: src:deps:web
+
+  src:deps:web:
+    internal: true
+    dir: ".src/authelia/web"
+    cmds:
+      - bun install
 
   src:build:
     desc: Build Authelia from source
     deps:
       - src:deps
+    dir: ".src/authelia"
     env:
       GOWORK: "off"
     cmds:
-      - cd {{.AUTHELIA_SRC}}/web && bun run build
+      - task: src:build:web
       - xplat os cp {{.AUTHELIA_SRC}}/api {{.AUTHELIA_SRC}}/internal/server/public_html/api -r
       - xplat os fetch --extract https://github.com/swagger-api/swagger-ui/archive/v{{.AUTHELIA_SWAGGER_VERSION}}.tar.gz --output {{.AUTHELIA_SRC}}/internal/server/public_html/api --strip 2 --include "*/dist/*"
-      - cd {{.AUTHELIA_SRC}} && CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
+      - CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
+
+  src:build:web:
+    internal: true
+    dir: ".src/authelia/web"
+    cmds:
+      - bun run build
 
   bin:upload:
     desc: Upload the Authelia binary to GitHub Releases
@@ -94,6 +108,7 @@ tasks:
 
   start:
     desc: Start Authelia
+    dir: "systems/authelia"
     dotenv:
       - .env
     deps:
