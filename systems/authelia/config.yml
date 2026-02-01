@@ -1,6 +1,7 @@
 # Authelia Configuration
 # https://www.authelia.com/configuration/
 # Secrets are loaded from environment variables via .env (dotenv in Taskfile)
+# File paths are overridden via env vars in the start task
 
 theme: dark
 
@@ -19,7 +20,7 @@ identity_validation:
 
 authentication_backend:
   file:
-    path: /tmp/authelia/users_database.yml
+    path: users_database.yml
 
 access_control:
   default_policy: one_factor
@@ -33,8 +34,8 @@ session:
 storage:
   encryption_key: insecure_encryption_key
   local:
-    path: /tmp/authelia/db.sqlite3
+    path: db.sqlite3
 
 notifier:
   filesystem:
-    filename: /tmp/authelia/notification.txt
+    filename: notification.txt
