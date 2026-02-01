@@ -49,26 +49,24 @@ tasks:
 
   src:deps:
     desc: Install Authelia build dependencies
-    dir: "{{.AUTHELIA_SRC}}"
     deps:
       - src:clone
     env:
       GOWORK: "off"
     cmds:
-      - go mod download all
-      - cd web && bun install
+      - cd {{.AUTHELIA_SRC}} && go mod download all
+      - cd {{.AUTHELIA_SRC}}/web && bun install
 
   src:build:
     desc: Build Authelia from source
-    dir: "{{.AUTHELIA_SRC}}"
     deps:
       - src:deps
     env:
       GOWORK: "off"
     cmds:
-      - cd web && bun run build
-      - cp -r api internal/server/public_html/api
-      - CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
+      - cd {{.AUTHELIA_SRC}}/web && bun run build
+      - cp -r {{.AUTHELIA_SRC}}/api {{.AUTHELIA_SRC}}/internal/server/public_html/api
+      - cd {{.AUTHELIA_SRC}} && CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
       - chmod +x {{.AUTHELIA_BINARY}}
 
   bin:upload:
