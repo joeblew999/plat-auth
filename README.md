@@ -20,6 +20,14 @@ cas bin runs in each app convertibg the user / roles to internal roles. simple C
 
 caddy proxy in mode ?
 
+---
+
+https://github.com/lldap/lldap
+
+---
+
+https://github.com/asalimonov/authelia-admin
+
 see: 
 
 https://g.co/gemini/share/c060c245d76a
