@@ -1,0 +1,35 @@
+# Authelia Configuration
+# https://www.authelia.com/configuration/
+
+# TODO: Fill in your settings
+
+theme: dark
+
+server:
+  address: tcp://0.0.0.0:9091
+
+log:
+  level: debug
+
+totp:
+  issuer: authelia.com
+
+authentication_backend:
+  file:
+    path: /tmp/authelia/users_database.yml
+
+access_control:
+  default_policy: deny
+
+session:
+  cookies:
+    - domain: example.com
+      authelia_url: https://auth.example.com
+
+storage:
+  local:
+    path: /tmp/authelia/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /tmp/authelia/notification.txt
