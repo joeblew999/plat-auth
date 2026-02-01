@@ -2,6 +2,19 @@
 
 Authelia and casbin
 
+## concept
+
+authekia rubs using sqlite / coreosion. 
+
+cas bin runs in each app .
+
+caddy fronts each app .
+
+see: 
+
+https://g.co/gemini/share/c060c245d76a
+
+
 To build this "mini-Google" architecture in Go, your "agent" (the developer or your code-gen assistant) needs a specific blueprint.
 Here is the technical stack and the exact configuration files required to bridge Authelia (Identity) with Casbin (Permissions).
 1. The Core Components
