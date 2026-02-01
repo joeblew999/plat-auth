@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   AUTHELIA_VERSION: "4.39.15"
+  AUTHELIA_SWAGGER_VERSION: "5.30.2"
   AUTHELIA_PORT: "9091"
   AUTHELIA_OS:
     sh: go env GOOS
@@ -66,6 +67,9 @@ tasks:
     cmds:
       - cd {{.AUTHELIA_SRC}}/web && bun run build
       - cp -r {{.AUTHELIA_SRC}}/api {{.AUTHELIA_SRC}}/internal/server/public_html/api
+      - curl -fsSL https://github.com/swagger-api/swagger-ui/archive/v{{.AUTHELIA_SWAGGER_VERSION}}.tar.gz -o /tmp/swagger-ui.tar.gz
+      - tar -C {{.AUTHELIA_SRC}}/internal/server/public_html/api --exclude=index.html --exclude='*.map' --strip-components=2 -xf /tmp/swagger-ui.tar.gz swagger-ui-{{.AUTHELIA_SWAGGER_VERSION}}/dist
+      - rm -f /tmp/swagger-ui.tar.gz
       - cd {{.AUTHELIA_SRC}} && CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
       - chmod +x {{.AUTHELIA_BINARY}}
 
@@ -108,8 +112,7 @@ tasks:
       - cp -n .env.example .env 2>/dev/null || true
       - |
         echo ""
-        echo "  Authelia UI  http://127.0.0.1:{{.AUTHELIA_PORT}}"
-        echo "  Authelia API http://127.0.0.1:{{.AUTHELIA_PORT}}/api/"
+        echo "  Authelia  http://127.0.0.1:{{.AUTHELIA_PORT}}"
         echo ""
         echo "  Login: admin / admin"
         echo ""
