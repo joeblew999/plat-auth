@@ -48,6 +48,8 @@ tasks:
     dir: "{{.AUTHELIA_SRC}}"
     deps:
       - src:clone
+    env:
+      GOWORK: "off"
     cmds:
       - go mod download all
       - cd web && pnpm install
@@ -57,6 +59,8 @@ tasks:
     dir: "{{.AUTHELIA_SRC}}"
     deps:
       - src:deps
+    env:
+      GOWORK: "off"
     cmds:
       - cd web && pnpm build
       - cp -r api internal/server/public_html/api
