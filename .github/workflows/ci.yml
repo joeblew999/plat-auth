@@ -21,6 +21,9 @@ jobs:
           - runner: macos-latest
             os: darwin
             arch: arm64
+          - runner: windows-latest
+            os: windows
+            arch: amd64
 
     runs-on: ${{ matrix.runner }}
 
@@ -37,15 +40,13 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.x
+      - name: Install xplat
+        uses: joeblew999/xplat/.github/actions/setup@main
 
       - name: Build Authelia
-        run: task authelia:src:build
+        run: xplat task authelia:src:build
 
       - name: Upload binary to GitHub Releases
-        run: task authelia:bin:upload
+        run: xplat task authelia:bin:upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
