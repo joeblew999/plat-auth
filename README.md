@@ -4,11 +4,11 @@ Authelia and casbin
 
 ## concept
 
-an exact copy of google sign up and security thstbis reusable.
+an exact copy of google sign up and security that reusable for all Apps
 
 https://github.com/authelia/authelia
 
-authekia using sqlite / coreosion. 
+authekia using coreosion to no internet failure effects anything , but also your sydtem alwats works offline.
 
 web gui is authelia
 
