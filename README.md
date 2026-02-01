@@ -6,13 +6,19 @@ Authelia and casbin
 
 an exact copy of google sign up and security thstbis reusable.
 
+https://github.com/authelia/authelia
+
 authekia using sqlite / coreosion. 
+
+web gui is authelia
+
+---
+
+https://github.com/casbin/casbin
 
 cas bin runs in each app convertibg the user / roles to internal roles. simple CSV or whatever .
 
 caddy proxy in mode ?
-
-authekia web gui.
 
 see: 
 
