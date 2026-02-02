@@ -2,3 +2,5 @@
 .src/
 .data/
 .env
+node_modules/
+.via/

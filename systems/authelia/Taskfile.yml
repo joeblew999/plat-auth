@@ -18,6 +18,9 @@ vars:
   AUTHELIA_BIN_ASSET: "authelia-{{.AUTHELIA_OS}}-{{.AUTHELIA_ARCH}}"
   AUTHELIA_CONFIG: "{{.ROOT_DIR}}/systems/authelia/config.yml"
   AUTHELIA_FLOWS_DIR: "{{.ROOT_DIR}}/systems/authelia/flows"
+  CADDY_PORT: "8080"
+  CADDY_BINARY: "{{.BIN_DIR}}/caddy"
+  CADDYFILE_TEMPLATE: "{{.ROOT_DIR}}/systems/authelia/Caddyfile.template"
 
 tasks:
   debug:
@@ -111,9 +114,17 @@ tasks:
       - xplat os rm -rf {{.AUTHELIA_DATA}}
 
   stop:
-    desc: Stop Authelia
+    desc: Stop Authelia and Caddy
     cmds:
       - lsof -ti :{{.AUTHELIA_PORT}} | xargs kill 2>/dev/null || true
+      - lsof -ti :{{.CADDY_PORT}} | xargs kill 2>/dev/null || true
+
+  caddy:download:
+    desc: Install Caddy via go install
+    cmds:
+      - GOBIN={{.BIN_DIR}} go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+    status:
+      - test -f {{.CADDY_BINARY}}
 
   tls:generate:
     internal: true
@@ -180,6 +191,10 @@ tasks:
     dotenv:
       - .env
     env:
+      CLOUDFLARED: "{{.HOME}}/.xplat/bin/cloudflared"
+      CADDY: "{{.CADDY_BINARY}}"
+      CADDY_PORT: "{{.CADDY_PORT}}"
+      CADDYFILE_TEMPLATE: "{{.CADDYFILE_TEMPLATE}}"
       AUTH_BINARY: "{{.AUTHELIA_BINARY}}"
       AUTH_CONFIG: "{{.AUTHELIA_CONFIG}}"
       AUTH_PORT: "{{.AUTHELIA_PORT}}"
@@ -189,8 +204,12 @@ tasks:
       AUTHELIA_STORAGE_LOCAL_PATH: "{{.AUTHELIA_DATA}}/db.sqlite3"
       AUTHELIA_AUTHENTICATION_BACKEND_FILE_PATH: "{{.ROOT_DIR}}/systems/authelia/users_database.yml"
       AUTHELIA_NOTIFIER_FILESYSTEM_FILENAME: "{{.AUTHELIA_DATA}}/notification.txt"
+      AUTHELIA_SERVER_TLS_CERTIFICATE: "{{.AUTHELIA_DATA}}/tls/cert.pem"
+      AUTHELIA_SERVER_TLS_KEY: "{{.AUTHELIA_DATA}}/tls/key.pem"
     deps:
       - bin:download
+      - tls:generate
+      - caddy:download
     cmds:
       - xplat sync-cf check 2>/dev/null || xplat sync-cf install
       - task: stop
