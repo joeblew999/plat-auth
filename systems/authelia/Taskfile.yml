@@ -190,6 +190,10 @@ tasks:
     dir: "systems/authelia"
     dotenv:
       - .env
+    deps:
+      - bin:download
+      - tls:generate
+      - caddy:download
     env:
       CLOUDFLARED: "{{.HOME}}/.xplat/bin/cloudflared"
       CADDY: "{{.CADDY_BINARY}}"
@@ -201,18 +205,17 @@ tasks:
       AUTH_FLOW: "{{.AUTH_FLOW}}"
       AUTH_FLOWS_DIR: "{{.AUTHELIA_FLOWS_DIR}}"
       DATA_DIR: "{{.AUTHELIA_DATA}}"
+      ROOT_DIR: "{{.ROOT_DIR}}"
       AUTHELIA_STORAGE_LOCAL_PATH: "{{.AUTHELIA_DATA}}/db.sqlite3"
       AUTHELIA_AUTHENTICATION_BACKEND_FILE_PATH: "{{.ROOT_DIR}}/systems/authelia/users_database.yml"
       AUTHELIA_NOTIFIER_FILESYSTEM_FILENAME: "{{.AUTHELIA_DATA}}/notification.txt"
       AUTHELIA_SERVER_TLS_CERTIFICATE: "{{.AUTHELIA_DATA}}/tls/cert.pem"
       AUTHELIA_SERVER_TLS_KEY: "{{.AUTHELIA_DATA}}/tls/key.pem"
-    deps:
-      - bin:download
-      - tls:generate
-      - caddy:download
     cmds:
       - xplat sync-cf check 2>/dev/null || xplat sync-cf install
       - task: stop
       - xplat os mkdir -p {{.AUTHELIA_DATA}}
       - xplat os cp .env.example .env 2>/dev/null || true
-      - "{{.ROOT_DIR}}/scripts/tunnel.sh"
+      - rm -f {{.AUTHELIA_DATA}}/tunnel.log
+      - >-
+        xplat process up --no-server -f {{.ROOT_DIR}}/process-compose.yml
