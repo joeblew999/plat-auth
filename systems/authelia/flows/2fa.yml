@@ -1,0 +1,3 @@
+# Flow: two-factor authentication required (default)
+access_control:
+  default_policy: two_factor

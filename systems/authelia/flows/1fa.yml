@@ -1,0 +1,3 @@
+# Flow: password-only (no 2FA required)
+access_control:
+  default_policy: one_factor

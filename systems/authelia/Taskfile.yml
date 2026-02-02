@@ -17,6 +17,7 @@ vars:
   AUTHELIA_GH_TAG: "authelia-v{{.AUTHELIA_VERSION}}-{{.AUTHELIA_OS}}-{{.AUTHELIA_ARCH}}"
   AUTHELIA_BIN_ASSET: "authelia-{{.AUTHELIA_OS}}-{{.AUTHELIA_ARCH}}"
   AUTHELIA_CONFIG: "{{.ROOT_DIR}}/systems/authelia/config.yml"
+  AUTHELIA_FLOWS_DIR: "{{.ROOT_DIR}}/systems/authelia/flows"
 
 tasks:
   debug:
@@ -36,6 +37,7 @@ tasks:
         echo "AUTHELIA_GH_TAG:     {{.AUTHELIA_GH_TAG}}"
         echo "AUTHELIA_BIN_ASSET:  {{.AUTHELIA_BIN_ASSET}}"
         echo "AUTHELIA_CONFIG:     {{.AUTHELIA_CONFIG}}"
+        echo "AUTHELIA_FLOWS_DIR:  {{.AUTHELIA_FLOWS_DIR}}"
         echo "BIN_DIR:             {{.BIN_DIR}}"
         echo "SRC_DIR:             {{.SRC_DIR}}"
         echo "DATA_DIR:            {{.DATA_DIR}}"
@@ -74,8 +76,8 @@ tasks:
       GOWORK: "off"
     cmds:
       - task: src:build:web
-      - xplat os cp {{.AUTHELIA_SRC}}/api {{.AUTHELIA_SRC}}/internal/server/public_html/api -r
       - xplat os fetch --extract https://github.com/swagger-api/swagger-ui/archive/v{{.AUTHELIA_SWAGGER_VERSION}}.tar.gz --output {{.AUTHELIA_SRC}}/internal/server/public_html/api --strip 2 --include "*/dist/*"
+      - xplat os cp {{.AUTHELIA_SRC}}/api {{.AUTHELIA_SRC}}/internal/server/public_html/api -r
       - CGO_ENABLED=1 go build -ldflags "-s -w" -trimpath -o {{.AUTHELIA_BINARY}} ./cmd/authelia
 
   src:build:web:
@@ -98,33 +100,100 @@ tasks:
     cmds:
       - xplat os mkdir -p {{.BIN_DIR}}
       - gh release download "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --pattern "{{.AUTHELIA_BIN_ASSET}}" --output {{.AUTHELIA_BINARY}} --clobber
+      - chmod +x {{.AUTHELIA_BINARY}} 2>/dev/null || true
     status:
       - test -f {{.AUTHELIA_BINARY}}
+
+  reset:
+    desc: Reset Authelia data (deletes DB and notifications)
+    cmds:
+      - task: stop
+      - xplat os rm -rf {{.AUTHELIA_DATA}}
 
   stop:
     desc: Stop Authelia
     cmds:
       - lsof -ti :{{.AUTHELIA_PORT}} | xargs kill 2>/dev/null || true
 
+  tls:generate:
+    internal: true
+    cmds:
+      - xplat os mkdir -p {{.AUTHELIA_DATA}}/tls
+      - >-
+        openssl req -x509 -nodes -newkey rsa:2048
+        -keyout {{.AUTHELIA_DATA}}/tls/key.pem
+        -out {{.AUTHELIA_DATA}}/tls/cert.pem
+        -days 3650
+        -subj "/CN=127.0.0.1"
+        -addext "subjectAltName=IP:127.0.0.1"
+    status:
+      - test -f {{.AUTHELIA_DATA}}/tls/cert.pem
+
   start:
-    desc: Start Authelia
+    desc: Start Authelia locally
     dir: "systems/authelia"
     dotenv:
       - .env
     deps:
       - bin:download
+      - tls:generate
     env:
       AUTHELIA_STORAGE_LOCAL_PATH: "{{.AUTHELIA_DATA}}/db.sqlite3"
       AUTHELIA_AUTHENTICATION_BACKEND_FILE_PATH: "{{.ROOT_DIR}}/systems/authelia/users_database.yml"
       AUTHELIA_NOTIFIER_FILESYSTEM_FILENAME: "{{.AUTHELIA_DATA}}/notification.txt"
+      AUTHELIA_SERVER_TLS_CERTIFICATE: "{{.AUTHELIA_DATA}}/tls/cert.pem"
+      AUTHELIA_SERVER_TLS_KEY: "{{.AUTHELIA_DATA}}/tls/key.pem"
     cmds:
       - lsof -ti :{{.AUTHELIA_PORT}} | xargs kill 2>/dev/null || true
       - xplat os mkdir -p {{.AUTHELIA_DATA}}
       - xplat os cp .env.example .env 2>/dev/null || true
       - |
         echo ""
-        echo "  Authelia  http://127.0.0.1:{{.AUTHELIA_PORT}}"
+        echo "  Authelia      https://127.0.0.1:{{.AUTHELIA_PORT}}"
+        echo "  Swagger UI    https://127.0.0.1:{{.AUTHELIA_PORT}}/api/"
         echo ""
         echo "  Login: admin / admin"
         echo ""
-      - "{{.AUTHELIA_BINARY}} --config {{.AUTHELIA_CONFIG}} {{.CLI_ARGS}}"
+      - >-
+        {{.AUTHELIA_BINARY}}
+        --config {{.AUTHELIA_CONFIG}}
+        --config {{.AUTHELIA_FLOWS_DIR}}/2fa.yml
+        {{.CLI_ARGS}}
+
+  tunnel:
+    desc: Start Authelia via Cloudflare Tunnel with 2FA (default)
+    cmds:
+      - task: tunnel:run
+        vars:
+          AUTH_FLOW: 2fa
+
+  tunnel:1fa:
+    desc: Start Authelia via Cloudflare Tunnel — password only (no 2FA)
+    cmds:
+      - task: tunnel:run
+        vars:
+          AUTH_FLOW: 1fa
+
+  tunnel:run:
+    internal: true
+    dir: "systems/authelia"
+    dotenv:
+      - .env
+    env:
+      AUTH_BINARY: "{{.AUTHELIA_BINARY}}"
+      AUTH_CONFIG: "{{.AUTHELIA_CONFIG}}"
+      AUTH_PORT: "{{.AUTHELIA_PORT}}"
+      AUTH_FLOW: "{{.AUTH_FLOW}}"
+      AUTH_FLOWS_DIR: "{{.AUTHELIA_FLOWS_DIR}}"
+      DATA_DIR: "{{.AUTHELIA_DATA}}"
+      AUTHELIA_STORAGE_LOCAL_PATH: "{{.AUTHELIA_DATA}}/db.sqlite3"
+      AUTHELIA_AUTHENTICATION_BACKEND_FILE_PATH: "{{.ROOT_DIR}}/systems/authelia/users_database.yml"
+      AUTHELIA_NOTIFIER_FILESYSTEM_FILENAME: "{{.AUTHELIA_DATA}}/notification.txt"
+    deps:
+      - bin:download
+    cmds:
+      - xplat sync-cf check 2>/dev/null || xplat sync-cf install
+      - task: stop
+      - xplat os mkdir -p {{.AUTHELIA_DATA}}
+      - xplat os cp .env.example .env 2>/dev/null || true
+      - "{{.ROOT_DIR}}/scripts/tunnel.sh"

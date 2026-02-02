@@ -12,7 +12,13 @@ log:
   level: debug
 
 totp:
-  issuer: authelia.com
+  issuer: plat-auth
+  algorithm: SHA1
+  digits: 6
+  period: 30
+
+webauthn:
+  display_name: plat-auth
 
 identity_validation:
   reset_password:
@@ -22,8 +28,7 @@ authentication_backend:
   file:
     path: users_database.yml
 
-access_control:
-  default_policy: one_factor
+# access_control.default_policy is set by flow overlays (flows/1fa.yml or flows/2fa.yml)
 
 session:
   secret: insecure_session_secret
