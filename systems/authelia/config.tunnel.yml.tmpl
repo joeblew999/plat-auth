@@ -1,0 +1,8 @@
+server:
+  address: tcp://0.0.0.0:${AUTH_PORT}/authelia
+session:
+  secret: insecure_session_secret
+  cookies:
+    - domain: ${TUNNEL_DOMAIN}
+      authelia_url: ${TUNNEL_URL}/authelia
+      same_site: lax

@@ -1,26 +1,17 @@
 version: "0.5"
 
-# Disable process-compose API server to avoid conflicting with Caddy on 8080
-disable_server: true
+# API server uses UDS (-U flag) to avoid port conflict with Caddy on 8080
 
 processes:
   cloudflared:
-    command: >-
-      ${CLOUDFLARED} tunnel
-      --url http://127.0.0.1:${CADDY_PORT}
+    command: xplat sync-cf tunnel ${CADDY_PORT}
     log_location: ${DATA_DIR}/tunnel.log
-    readiness_probe:
-      exec:
-        command: grep -q 'trycloudflare\.com' ${DATA_DIR}/tunnel.log 2>/dev/null
-      initial_delay_seconds: 2
-      period_seconds: 1
-      failure_threshold: 30
 
   tunnel-setup:
-    command: ${ROOT_DIR}/scripts/tunnel-setup.sh
+    command: xplat task authelia:tunnel:setup --dir ${ROOT_DIR}
     depends_on:
       cloudflared:
-        condition: process_healthy
+        condition: process_started
     availability:
       restart: "no"
       exit_on_end: false
@@ -30,12 +21,6 @@ processes:
     depends_on:
       tunnel-setup:
         condition: process_completed_successfully
-    readiness_probe:
-      exec:
-        command: lsof -ti :${CADDY_PORT} >/dev/null 2>&1
-      initial_delay_seconds: 1
-      period_seconds: 1
-      failure_threshold: 10
 
   authelia:
     command: >-
@@ -46,9 +31,3 @@ processes:
     depends_on:
       tunnel-setup:
         condition: process_completed_successfully
-    readiness_probe:
-      exec:
-        command: curl -sk https://127.0.0.1:${AUTH_PORT}/api/health >/dev/null 2>&1
-      initial_delay_seconds: 1
-      period_seconds: 1
-      failure_threshold: 10

@@ -118,8 +118,7 @@ tasks:
   stop:
     desc: Stop Authelia and Caddy
     cmds:
-      - lsof -ti :{{.AUTHELIA_PORT}} | xargs kill 2>/dev/null || true
-      - lsof -ti :{{.CADDY_PORT}} | xargs kill 2>/dev/null || true
+      - xplat process down -U 2>/dev/null || true
 
   caddy:download:
     desc: Install Caddy via go install
@@ -157,7 +156,6 @@ tasks:
       AUTHELIA_SERVER_TLS_CERTIFICATE: "{{.AUTHELIA_DATA}}/tls/cert.pem"
       AUTHELIA_SERVER_TLS_KEY: "{{.AUTHELIA_DATA}}/tls/key.pem"
     cmds:
-      - lsof -ti :{{.AUTHELIA_PORT}} | xargs kill 2>/dev/null || true
       - xplat os mkdir -p {{.AUTHELIA_DATA}}
       - xplat os cp .env.example .env 2>/dev/null || true
       - |
@@ -187,6 +185,35 @@ tasks:
         vars:
           AUTH_FLOW: 1fa
 
+  tunnel:setup:
+    desc: Extract tunnel URL and generate configs (called by process-compose)
+    silent: true
+    env:
+      AUTH_PORT: "{{.AUTHELIA_PORT}}"
+    cmds:
+      - |
+        echo "  Waiting for Cloudflare Tunnel URL..."
+        TUNNEL_URL=""
+        i=0
+        while [ -z "$TUNNEL_URL" ] && [ "$i" -lt 60 ]; do
+          TUNNEL_URL=$(xplat os jq -r 'select(.message | test("https://[a-z0-9-]+\\.trycloudflare\\.com")) | .message | match("https://[a-z0-9-]+\\.trycloudflare\\.com").string' "{{.AUTHELIA_DATA}}/tunnel.log" 2>/dev/null | { read -r line; echo "$line"; }) || true
+          if [ -z "$TUNNEL_URL" ]; then sleep 1; fi
+          i=$((i + 1))
+        done
+        if [ -z "$TUNNEL_URL" ]; then
+          echo "  ERROR: Failed to get tunnel URL after 60s"
+          exit 1
+        fi
+        TUNNEL_DOMAIN=${TUNNEL_URL#https://}
+        export TUNNEL_URL TUNNEL_DOMAIN AUTH_PORT
+        xplat os envsubst "{{.ROOT_DIR}}/systems/authelia/config.tunnel.yml.tmpl" -o "{{.AUTHELIA_DATA}}/config.session.yml"
+        xplat os cp "{{.CADDYFILE_TEMPLATE}}" "{{.AUTHELIA_DATA}}/Caddyfile"
+        echo ""
+        echo "  Tunnel URL:  $TUNNEL_URL"
+        echo "  Portal:      $TUNNEL_URL/authelia"
+        echo "  Login:       admin / admin"
+        echo ""
+
   tunnel:run:
     internal: true
     dir: "systems/authelia"
@@ -197,7 +224,6 @@ tasks:
       - tls:generate
       - caddy:download
     env:
-      CLOUDFLARED: "{{.HOME}}/.xplat/bin/cloudflared"
       CADDY: "{{.CADDY_BINARY}}"
       CADDY_PORT: "{{.CADDY_PORT}}"
       CADDYFILE_TEMPLATE: "{{.CADDYFILE_TEMPLATE}}"
@@ -214,10 +240,9 @@ tasks:
       AUTHELIA_SERVER_TLS_CERTIFICATE: "{{.AUTHELIA_DATA}}/tls/cert.pem"
       AUTHELIA_SERVER_TLS_KEY: "{{.AUTHELIA_DATA}}/tls/key.pem"
     cmds:
-      - xplat sync-cf check 2>/dev/null || xplat sync-cf install
       - task: stop
       - xplat os mkdir -p {{.AUTHELIA_DATA}}
       - xplat os cp .env.example .env 2>/dev/null || true
-      - rm -f {{.AUTHELIA_DATA}}/tunnel.log
+      - xplat os rm -f {{.AUTHELIA_DATA}}/tunnel.log
       - >-
-        xplat process up -t=false --no-server -f {{.ROOT_DIR}}/process-compose.yml
+        xplat process up -t=false -U -f {{.ROOT_DIR}}/process-compose.yml
