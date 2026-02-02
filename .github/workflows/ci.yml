@@ -41,7 +41,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install xplat
-        run: GOPROXY=direct go install github.com/joeblew999/xplat@e3869dfefaed
+        run: |
+          git clone --depth 1 https://github.com/joeblew999/xplat.git "$RUNNER_TEMP/xplat"
+          cd "$RUNNER_TEMP/xplat"
+          go build -o xplat .
+          cp xplat "$GOPATH/bin/" 2>/dev/null || cp xplat "$(go env GOPATH)/bin/"
 
       - name: Debug vars
         run: xplat task authelia:debug
