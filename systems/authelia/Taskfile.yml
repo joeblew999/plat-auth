@@ -107,7 +107,10 @@ tasks:
     desc: Download the Authelia binary from GitHub Releases
     cmds:
       - xplat os mkdir -p {{.BIN_DIR}}
-      - gh release download "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --pattern "{{.AUTHELIA_BIN_ASSET}}" --output {{.AUTHELIA_BINARY}} --clobber
+      - xplat os fetch https://github.com/{{.AUTHELIA_GH_REPO}}/releases/download/{{.AUTHELIA_GH_TAG}}/{{.AUTHELIA_BIN_ASSET}} --output {{.BIN_DIR}}/
+      - xplat os mv {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}} {{.AUTHELIA_BINARY}}
+      - cmd: chmod +x {{.AUTHELIA_BINARY}}
+        platforms: [linux, darwin]
     status:
       - xplat os exists {{.AUTHELIA_BINARY}}
 
@@ -126,7 +129,7 @@ tasks:
     desc: Download Caddy binary from GitHub Releases
     cmds:
       - xplat os mkdir -p {{.BIN_DIR}}
-      - xplat os fetch --extract https://github.com/caddyserver/caddy/releases/download/v{{.CADDY_VERSION}}/caddy_{{.CADDY_VERSION}}_{{.CADDY_OS}}_{{.HOST_ARCH}}.{{.CADDY_ARCHIVE_EXT}} --output {{.BIN_DIR}} --include "caddy*"
+      - xplat os fetch --extract https://github.com/caddyserver/caddy/releases/download/v{{.CADDY_VERSION}}/caddy_{{.CADDY_VERSION}}_{{.CADDY_OS}}_{{ARCH}}.{{.CADDY_ARCHIVE_EXT}} --output {{.BIN_DIR}} --include "caddy*"
     status:
       - xplat os exists {{.CADDY_BINARY}}
 
