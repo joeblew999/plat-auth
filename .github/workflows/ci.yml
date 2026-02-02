@@ -42,8 +42,6 @@ jobs:
 
       - name: Install xplat
         uses: joeblew999/xplat/.github/actions/setup@main
-        with:
-          version: dev
 
       - name: Debug vars
         run: xplat task authelia:debug
