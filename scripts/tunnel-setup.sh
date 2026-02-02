@@ -22,8 +22,10 @@ fi
 
 TUNNEL_DOMAIN=$(echo "$TUNNEL_URL" | sed 's|https://||')
 
-# Generate session config
+# Generate tunnel-specific config overlay
 cat > "$DATA_DIR/config.session.yml" <<EOF
+server:
+  address: tcp://0.0.0.0:${AUTH_PORT}/authelia
 session:
   secret: insecure_session_secret
   cookies:

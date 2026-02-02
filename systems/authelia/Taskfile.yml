@@ -218,4 +218,4 @@ tasks:
       - xplat os cp .env.example .env 2>/dev/null || true
       - rm -f {{.AUTHELIA_DATA}}/tunnel.log
       - >-
-        xplat process up --no-server -f {{.ROOT_DIR}}/process-compose.yml
+        xplat process up -t=false --no-server -f {{.ROOT_DIR}}/process-compose.yml
