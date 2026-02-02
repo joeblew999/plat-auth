@@ -4,22 +4,29 @@ vars:
   AUTHELIA_VERSION: "4.39.15"
   AUTHELIA_SWAGGER_VERSION: "5.30.2"
   AUTHELIA_PORT: "9091"
-  AUTHELIA_OS:
-    sh: go env GOOS
-  AUTHELIA_ARCH:
-    sh: go env GOARCH
-  AUTHELIA_EXT:
-    sh: go env GOEXE
-  AUTHELIA_BINARY: "{{.BIN_DIR}}/authelia{{.AUTHELIA_EXT}}"
+  CADDY_VERSION: "2.9.1"
+  CADDY_PORT: "8080"
+  # Cross-platform OS/arch detection (no Go required)
+  HOST_OS:
+    sh: uname -s | tr '[:upper:]' '[:lower:]' | sed 's/mingw.*/windows/' | sed 's/msys.*/windows/'
+  HOST_ARCH:
+    sh: uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/'
+  HOST_EXT:
+    sh: 'case "$(uname -s)" in MINGW*|MSYS*) echo ".exe" ;; *) echo "" ;; esac'
+  AUTHELIA_BINARY: "{{.BIN_DIR}}/authelia{{.HOST_EXT}}"
   AUTHELIA_SRC: "{{.SRC_DIR}}/authelia"
   AUTHELIA_DATA: "{{.DATA_DIR}}/authelia"
   AUTHELIA_GH_REPO: "joeblew999/plat-auth"
-  AUTHELIA_GH_TAG: "authelia-v{{.AUTHELIA_VERSION}}-{{.AUTHELIA_OS}}-{{.AUTHELIA_ARCH}}"
-  AUTHELIA_BIN_ASSET: "authelia-{{.AUTHELIA_OS}}-{{.AUTHELIA_ARCH}}"
+  AUTHELIA_GH_TAG: "authelia-v{{.AUTHELIA_VERSION}}-{{.HOST_OS}}-{{.HOST_ARCH}}"
+  AUTHELIA_BIN_ASSET: "authelia-{{.HOST_OS}}-{{.HOST_ARCH}}"
   AUTHELIA_CONFIG: "{{.ROOT_DIR}}/systems/authelia/config.yml"
   AUTHELIA_FLOWS_DIR: "{{.ROOT_DIR}}/systems/authelia/flows"
-  CADDY_PORT: "8080"
-  CADDY_BINARY: "{{.BIN_DIR}}/caddy"
+  # Caddy uses "mac" not "darwin" in release asset names
+  CADDY_OS:
+    sh: 'case "$(uname -s)" in Darwin) echo "mac" ;; Linux) echo "linux" ;; MINGW*|MSYS*) echo "windows" ;; *) echo "linux" ;; esac'
+  CADDY_ARCHIVE_EXT:
+    sh: 'case "$(uname -s)" in MINGW*|MSYS*) echo "zip" ;; *) echo "tar.gz" ;; esac'
+  CADDY_BINARY: "{{.BIN_DIR}}/caddy{{.HOST_EXT}}"
   CADDYFILE_TEMPLATE: "{{.ROOT_DIR}}/systems/authelia/Caddyfile.template"
 
 tasks:
@@ -28,11 +35,11 @@ tasks:
     silent: true
     cmds:
       - |
+        echo "HOST_OS:             {{.HOST_OS}}"
+        echo "HOST_ARCH:           {{.HOST_ARCH}}"
+        echo "HOST_EXT:            {{.HOST_EXT}}"
         echo "AUTHELIA_VERSION:    {{.AUTHELIA_VERSION}}"
         echo "AUTHELIA_PORT:       {{.AUTHELIA_PORT}}"
-        echo "AUTHELIA_OS:         {{.AUTHELIA_OS}}"
-        echo "AUTHELIA_ARCH:       {{.AUTHELIA_ARCH}}"
-        echo "AUTHELIA_EXT:        {{.AUTHELIA_EXT}}"
         echo "AUTHELIA_BINARY:     {{.AUTHELIA_BINARY}}"
         echo "AUTHELIA_SRC:        {{.AUTHELIA_SRC}}"
         echo "AUTHELIA_DATA:       {{.AUTHELIA_DATA}}"
@@ -41,6 +48,9 @@ tasks:
         echo "AUTHELIA_BIN_ASSET:  {{.AUTHELIA_BIN_ASSET}}"
         echo "AUTHELIA_CONFIG:     {{.AUTHELIA_CONFIG}}"
         echo "AUTHELIA_FLOWS_DIR:  {{.AUTHELIA_FLOWS_DIR}}"
+        echo "CADDY_VERSION:       {{.CADDY_VERSION}}"
+        echo "CADDY_BINARY:        {{.CADDY_BINARY}}"
+        echo "CADDY_OS:            {{.CADDY_OS}}"
         echo "BIN_DIR:             {{.BIN_DIR}}"
         echo "SRC_DIR:             {{.SRC_DIR}}"
         echo "DATA_DIR:            {{.DATA_DIR}}"
@@ -51,7 +61,7 @@ tasks:
       - xplat os mkdir -p {{.SRC_DIR}}
       - xplat os git clone https://github.com/authelia/authelia.git {{.AUTHELIA_SRC}} v{{.AUTHELIA_VERSION}}
     status:
-      - test -d {{.AUTHELIA_SRC}}/.git
+      - xplat os exists {{.AUTHELIA_SRC}}/.git
 
   src:deps:
     desc: Install Authelia build dependencies
@@ -92,7 +102,7 @@ tasks:
   bin:upload:
     desc: Upload the Authelia binary to GitHub Releases
     preconditions:
-      - sh: test -f {{.AUTHELIA_BINARY}}
+      - sh: xplat os exists {{.AUTHELIA_BINARY}}
         msg: "Binary not found at {{.AUTHELIA_BINARY}}. Build it first with src:build."
     cmds:
       - gh release create "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --title "Authelia {{.AUTHELIA_VERSION}} ({{.AUTHELIA_OS}}/{{.AUTHELIA_ARCH}})" --notes "Built from authelia v{{.AUTHELIA_VERSION}}" 2>/dev/null || true
@@ -107,7 +117,7 @@ tasks:
       - gh release download "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --pattern "{{.AUTHELIA_BIN_ASSET}}" --output {{.AUTHELIA_BINARY}} --clobber
       - chmod +x {{.AUTHELIA_BINARY}} 2>/dev/null || true
     status:
-      - test -f {{.AUTHELIA_BINARY}}
+      - xplat os exists {{.AUTHELIA_BINARY}}
 
   reset:
     desc: Reset Authelia data (deletes DB and notifications)
@@ -121,11 +131,13 @@ tasks:
       - xplat process down -U 2>/dev/null || true
 
   caddy:download:
-    desc: Install Caddy via go install
+    desc: Download Caddy binary from GitHub Releases
     cmds:
-      - GOBIN={{.BIN_DIR}} go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
+      - xplat os mkdir -p {{.BIN_DIR}}
+      - xplat os fetch --extract https://github.com/caddyserver/caddy/releases/download/v{{.CADDY_VERSION}}/caddy_{{.CADDY_VERSION}}_{{.CADDY_OS}}_{{.HOST_ARCH}}.{{.CADDY_ARCHIVE_EXT}} --output {{.BIN_DIR}} --include "caddy*"
+      - chmod +x {{.CADDY_BINARY}} 2>/dev/null || true
     status:
-      - test -f {{.CADDY_BINARY}}
+      - xplat os exists {{.CADDY_BINARY}}
 
   tls:generate:
     internal: true
@@ -139,7 +151,7 @@ tasks:
         -subj "/CN=127.0.0.1"
         -addext "subjectAltName=IP:127.0.0.1"
     status:
-      - test -f {{.AUTHELIA_DATA}}/tls/cert.pem
+      - xplat os exists {{.AUTHELIA_DATA}}/tls/cert.pem
 
   start:
     desc: Start Authelia locally
