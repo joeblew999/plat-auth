@@ -6,26 +6,19 @@ vars:
   AUTHELIA_PORT: "9091"
   CADDY_VERSION: "2.9.1"
   CADDY_PORT: "8080"
-  # Cross-platform OS/arch detection (no Go required)
-  HOST_OS:
-    sh: uname -s | tr '[:upper:]' '[:lower:]' | sed 's/mingw.*/windows/' | sed 's/msys.*/windows/'
-  HOST_ARCH:
-    sh: uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/'
-  HOST_EXT:
-    sh: 'case "$(uname -s)" in MINGW*|MSYS*) echo ".exe" ;; *) echo "" ;; esac'
+  # OS/ARCH use Task built-in {{OS}} and {{ARCH}} (work on all platforms)
+  HOST_EXT: '{{if eq OS "windows"}}.exe{{end}}'
   AUTHELIA_BINARY: "{{.BIN_DIR}}/authelia{{.HOST_EXT}}"
   AUTHELIA_SRC: "{{.SRC_DIR}}/authelia"
   AUTHELIA_DATA: "{{.DATA_DIR}}/authelia"
   AUTHELIA_GH_REPO: "joeblew999/plat-auth"
-  AUTHELIA_GH_TAG: "authelia-v{{.AUTHELIA_VERSION}}-{{.HOST_OS}}-{{.HOST_ARCH}}"
-  AUTHELIA_BIN_ASSET: "authelia-{{.HOST_OS}}-{{.HOST_ARCH}}"
+  AUTHELIA_GH_TAG: "authelia-v{{.AUTHELIA_VERSION}}-{{OS}}-{{ARCH}}"
+  AUTHELIA_BIN_ASSET: "authelia-{{OS}}-{{ARCH}}"
   AUTHELIA_CONFIG: "{{.ROOT_DIR}}/systems/authelia/config.yml"
   AUTHELIA_FLOWS_DIR: "{{.ROOT_DIR}}/systems/authelia/flows"
   # Caddy uses "mac" not "darwin" in release asset names
-  CADDY_OS:
-    sh: 'case "$(uname -s)" in Darwin) echo "mac" ;; Linux) echo "linux" ;; MINGW*|MSYS*) echo "windows" ;; *) echo "linux" ;; esac'
-  CADDY_ARCHIVE_EXT:
-    sh: 'case "$(uname -s)" in MINGW*|MSYS*) echo "zip" ;; *) echo "tar.gz" ;; esac'
+  CADDY_OS: '{{if eq OS "darwin"}}mac{{else}}{{OS}}{{end}}'
+  CADDY_ARCHIVE_EXT: '{{if eq OS "windows"}}zip{{else}}tar.gz{{end}}'
   CADDY_BINARY: "{{.BIN_DIR}}/caddy{{.HOST_EXT}}"
   CADDYFILE_TEMPLATE: "{{.ROOT_DIR}}/systems/authelia/Caddyfile.template"
 
@@ -35,8 +28,8 @@ tasks:
     silent: true
     cmds:
       - |
-        echo "HOST_OS:             {{.HOST_OS}}"
-        echo "HOST_ARCH:           {{.HOST_ARCH}}"
+        echo "OS:                  {{OS}}"
+        echo "ARCH:                {{ARCH}}"
         echo "HOST_EXT:            {{.HOST_EXT}}"
         echo "AUTHELIA_VERSION:    {{.AUTHELIA_VERSION}}"
         echo "AUTHELIA_PORT:       {{.AUTHELIA_PORT}}"
@@ -105,7 +98,7 @@ tasks:
       - sh: xplat os exists {{.AUTHELIA_BINARY}}
         msg: "Binary not found at {{.AUTHELIA_BINARY}}. Build it first with src:build."
     cmds:
-      - gh release create "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --title "Authelia {{.AUTHELIA_VERSION}} ({{.AUTHELIA_OS}}/{{.AUTHELIA_ARCH}})" --notes "Built from authelia v{{.AUTHELIA_VERSION}}" 2>/dev/null || true
+      - gh release create "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --title "Authelia {{.AUTHELIA_VERSION}} ({{OS}}/{{ARCH}})" --notes "Built from authelia v{{.AUTHELIA_VERSION}}" 2>/dev/null || true
       - cp {{.AUTHELIA_BINARY}} {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}}
       - gh release upload "{{.AUTHELIA_GH_TAG}}" {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}} --repo {{.AUTHELIA_GH_REPO}} --clobber
       - rm {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}}
