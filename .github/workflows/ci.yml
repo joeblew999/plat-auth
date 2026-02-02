@@ -41,7 +41,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install xplat
-        run: go install github.com/joeblew999/xplat@main
+        run: GOPROXY=direct go install github.com/joeblew999/xplat@e3869dfefaed
 
       - name: Debug vars
         run: xplat task authelia:debug
