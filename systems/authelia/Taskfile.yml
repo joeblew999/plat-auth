@@ -96,7 +96,9 @@ tasks:
         msg: "Binary not found at {{.AUTHELIA_BINARY}}. Build it first with src:build."
     cmds:
       - gh release create "{{.AUTHELIA_GH_TAG}}" --repo {{.AUTHELIA_GH_REPO}} --title "Authelia {{.AUTHELIA_VERSION}} ({{.AUTHELIA_OS}}/{{.AUTHELIA_ARCH}})" --notes "Built from authelia v{{.AUTHELIA_VERSION}}" 2>/dev/null || true
-      - gh release upload "{{.AUTHELIA_GH_TAG}}" {{.AUTHELIA_BINARY}}#{{.AUTHELIA_BIN_ASSET}} --repo {{.AUTHELIA_GH_REPO}} --clobber
+      - cp {{.AUTHELIA_BINARY}} {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}}
+      - gh release upload "{{.AUTHELIA_GH_TAG}}" {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}} --repo {{.AUTHELIA_GH_REPO}} --clobber
+      - rm {{.BIN_DIR}}/{{.AUTHELIA_BIN_ASSET}}
 
   bin:download:
     desc: Download the Authelia binary from GitHub Releases
